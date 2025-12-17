@@ -1,17 +1,36 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Check, ChevronsUpDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { getAllBanks } from '@/lib/bank-styles'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import type { Tables } from '@/types/database'
 
 const debitCardSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido'),
   bank: z.string().min(1, 'El banco es requerido'),
+  bank_id: z.string().optional(),
+  holder_name: z.string().optional(),
   last_four_digits: z.string().max(4).optional(),
   current_balance: z.coerce.number().min(0, 'El saldo no puede ser negativo').optional(),
   is_active: z.boolean().default(true),
@@ -26,6 +45,9 @@ type Props = {
 
 export function DebitCardForm({ onSuccess, initialData }: Props) {
   const { user } = useAuth()
+  const [bankOpen, setBankOpen] = useState(false)
+  const [bankSearch, setBankSearch] = useState('')
+  const banks = getAllBanks()
 
   const {
     register,
@@ -39,6 +61,8 @@ export function DebitCardForm({ onSuccess, initialData }: Props) {
     defaultValues: {
       name: initialData?.name ?? '',
       bank: initialData?.bank ?? '',
+      bank_id: (initialData as { bank_id?: string })?.bank_id ?? '',
+      holder_name: (initialData as { holder_name?: string })?.holder_name ?? '',
       last_four_digits: initialData?.last_four_digits ?? '',
       current_balance: initialData?.current_balance ?? 0,
       is_active: initialData?.is_active ?? true,
@@ -46,6 +70,10 @@ export function DebitCardForm({ onSuccess, initialData }: Props) {
   })
 
   const isActive = watch('is_active')
+  const selectedBankId = watch('bank_id')
+  const bankName = watch('bank')
+
+  const selectedBank = banks.find((b) => b.id === selectedBankId)
 
   async function onSubmit(data: DebitCardFormData) {
     if (!user) return
@@ -53,6 +81,8 @@ export function DebitCardForm({ onSuccess, initialData }: Props) {
     const cardData = {
       name: data.name,
       bank: data.bank,
+      bank_id: data.bank_id || null,
+      holder_name: data.holder_name || null,
       last_four_digits: data.last_four_digits || null,
       current_balance: data.current_balance ?? 0,
       is_active: data.is_active,
@@ -75,6 +105,22 @@ export function DebitCardForm({ onSuccess, initialData }: Props) {
     onSuccess()
   }
 
+  function handleBankSelect(bankId: string, bankNameValue: string) {
+    setValue('bank_id', bankId)
+    setValue('bank', bankNameValue)
+    setBankOpen(false)
+    setBankSearch('')
+  }
+
+  function handleCustomBank() {
+    if (bankSearch.trim()) {
+      setValue('bank_id', '')
+      setValue('bank', bankSearch.trim())
+      setBankOpen(false)
+      setBankSearch('')
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -91,12 +137,65 @@ export function DebitCardForm({ onSuccess, initialData }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="bank">Banco</Label>
-          <Input
-            id="bank"
-            placeholder="Ej: BBVA"
-            {...register('bank')}
-          />
+          <Label>Banco</Label>
+          <Popover open={bankOpen} onOpenChange={setBankOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={bankOpen}
+                className="w-full justify-between font-normal"
+              >
+                {selectedBank?.name || bankName || 'Selecciona banco...'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+              <Command>
+                <CommandInput
+                  placeholder="Buscar o escribir banco..."
+                  value={bankSearch}
+                  onValueChange={setBankSearch}
+                />
+                <CommandList>
+                  <CommandEmpty>
+                    {bankSearch.trim() ? (
+                      <button
+                        type="button"
+                        className="w-full px-2 py-1.5 text-sm text-left hover:bg-slate-100 rounded"
+                        onClick={handleCustomBank}
+                      >
+                        Usar "{bankSearch}" como banco personalizado
+                      </button>
+                    ) : (
+                      <span className="text-slate-500">No se encontró banco</span>
+                    )}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {banks
+                      .filter((b) => b.id !== 'otro')
+                      .map((bank) => (
+                        <CommandItem
+                          key={bank.id}
+                          value={bank.name}
+                          onSelect={() => handleBankSelect(bank.id, bank.name)}
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              selectedBankId === bank.id
+                                ? 'opacity-100'
+                                : 'opacity-0'
+                            )}
+                          />
+                          {bank.name}
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           {errors.bank && (
             <p className="text-sm text-red-500">{errors.bank.message}</p>
           )}
@@ -115,18 +214,27 @@ export function DebitCardForm({ onSuccess, initialData }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="current_balance">Saldo actual</Label>
+          <Label htmlFor="holder_name">Nombre del titular (opcional)</Label>
           <Input
-            id="current_balance"
-            type="number"
-            step="0.01"
-            placeholder="0.00"
-            {...register('current_balance')}
+            id="holder_name"
+            placeholder="Ej: Juan Pérez"
+            {...register('holder_name')}
           />
-          {errors.current_balance && (
-            <p className="text-sm text-red-500">{errors.current_balance.message}</p>
-          )}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="current_balance">Saldo actual</Label>
+        <Input
+          id="current_balance"
+          type="number"
+          step="0.01"
+          placeholder="0.00"
+          {...register('current_balance')}
+        />
+        {errors.current_balance && (
+          <p className="text-sm text-red-500">{errors.current_balance.message}</p>
+        )}
       </div>
 
       <div className="flex items-center space-x-2">

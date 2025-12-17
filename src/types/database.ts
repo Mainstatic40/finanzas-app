@@ -72,10 +72,12 @@ export type Database = {
       credit_cards: {
         Row: {
           bank: string
+          bank_id: string | null
           created_at: string | null
           credit_limit: number | null
           current_balance: number | null
           cut_off_day: number
+          holder_name: string | null
           id: string
           is_active: boolean | null
           last_four_digits: string | null
@@ -85,10 +87,12 @@ export type Database = {
         }
         Insert: {
           bank: string
+          bank_id?: string | null
           created_at?: string | null
           credit_limit?: number | null
           current_balance?: number | null
           cut_off_day: number
+          holder_name?: string | null
           id?: string
           is_active?: boolean | null
           last_four_digits?: string | null
@@ -98,10 +102,12 @@ export type Database = {
         }
         Update: {
           bank?: string
+          bank_id?: string | null
           created_at?: string | null
           credit_limit?: number | null
           current_balance?: number | null
           cut_off_day?: number
+          holder_name?: string | null
           id?: string
           is_active?: boolean | null
           last_four_digits?: string | null
@@ -173,8 +179,10 @@ export type Database = {
       debit_cards: {
         Row: {
           bank: string
+          bank_id: string | null
           created_at: string | null
           current_balance: number | null
+          holder_name: string | null
           id: string
           is_active: boolean | null
           last_four_digits: string | null
@@ -183,8 +191,10 @@ export type Database = {
         }
         Insert: {
           bank: string
+          bank_id?: string | null
           created_at?: string | null
           current_balance?: number | null
+          holder_name?: string | null
           id?: string
           is_active?: boolean | null
           last_four_digits?: string | null
@@ -193,8 +203,10 @@ export type Database = {
         }
         Update: {
           bank?: string
+          bank_id?: string | null
           created_at?: string | null
           current_balance?: number | null
+          holder_name?: string | null
           id?: string
           is_active?: boolean | null
           last_four_digits?: string | null

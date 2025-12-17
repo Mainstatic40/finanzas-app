@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Pencil, Trash2, CreditCard, RefreshCw } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { getTypeById } from '@/lib/subscription-types'
 import { getIconByName } from '@/lib/icons'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ServiceLogo } from '@/components/ui/ServiceLogo'
 import type { Tables } from '@/types/database'
 
 type Subscription = Tables<'subscriptions'> & {
@@ -103,10 +103,6 @@ export function SubscriptionList({ onEdit, onDelete }: Props) {
   return (
     <div className="space-y-3">
       {subscriptions.map((subscription) => {
-        const typeInfo = subscription.subscription_type
-          ? getTypeById(subscription.subscription_type)
-          : null
-        const TypeIcon = typeInfo?.icon ?? RefreshCw
         const CategoryIcon = subscription.categories
           ? getIconByName(subscription.categories.icon)
           : null
@@ -120,9 +116,12 @@ export function SubscriptionList({ onEdit, onDelete }: Props) {
             <div className="flex items-start justify-between gap-4">
               {/* Left side: Icon and info */}
               <div className="flex items-start gap-4 flex-1">
-                {/* Type Icon */}
+                {/* Service Logo */}
                 <div className="p-2 rounded-lg bg-slate-100">
-                  <TypeIcon className="h-6 w-6 text-slate-600" />
+                  <ServiceLogo
+                    serviceName={subscription.provider || subscription.name}
+                    size={24}
+                  />
                 </div>
 
                 {/* Main info */}
