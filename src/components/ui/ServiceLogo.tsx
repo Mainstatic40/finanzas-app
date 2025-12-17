@@ -26,7 +26,7 @@ export function ServiceLogo({ serviceName, size = 24, className = '' }: Props) {
   if (config) {
     // Construir el nombre del componente: "netflix" -> "SiNetflix"
     const componentName = 'Si' + slugToPascalCase(config.iconName)
-    const IconComponent = (SimpleIcons as Record<string, ComponentType<IconProps>>)[componentName]
+    const IconComponent = (SimpleIcons as unknown as Record<string, ComponentType<IconProps>>)[componentName]
 
     if (IconComponent) {
       return (

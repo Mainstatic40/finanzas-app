@@ -59,7 +59,7 @@ export function CreditCardList({ onEdit, onDelete }: Props) {
             lastFourDigits={card.last_four_digits ?? undefined}
             currentBalance={card.current_balance || 0}
             availableBalance={availableCredit}
-            isActive={card.is_active}
+            isActive={card.is_active ?? undefined}
             creditLimit={card.credit_limit ?? undefined}
             cutOffDay={card.cut_off_day}
             paymentDueDay={card.payment_due_day}

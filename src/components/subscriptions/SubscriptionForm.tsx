@@ -101,7 +101,8 @@ export function SubscriptionForm({ onSuccess, initialData }: Props) {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<SubscriptionFormData>({
-    resolver: zodResolver(subscriptionSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(subscriptionSchema) as any,
     defaultValues: {
       name: initialData?.name ?? '',
       amount: initialData?.amount ?? undefined,

@@ -122,25 +122,26 @@ export function CreditForm({ onSuccess, initialData }: Props) {
       if (oldCardId !== newCardId || oldAmount !== newAmount) {
         // Remove old amount from old card
         if (oldCardId && initialData.is_active) {
-          await supabase.rpc('increment_card_balance', {
-            card_id: oldCardId,
-            amount: -oldAmount
-          }).catch(() => {
+          try {
+            await supabase.rpc('increment_card_balance', {
+              card_id: oldCardId,
+              amount: -oldAmount
+            })
+          } catch {
             // Fallback if RPC doesn't exist
-            supabase
+            const { data: card } = await supabase
               .from('credit_cards')
               .select('current_balance')
               .eq('id', oldCardId)
               .single()
-              .then(({ data: card }) => {
-                if (card) {
-                  supabase
-                    .from('credit_cards')
-                    .update({ current_balance: Math.max(0, (card.current_balance ?? 0) - oldAmount) })
-                    .eq('id', oldCardId)
-                }
-              })
-          })
+
+            if (card) {
+              await supabase
+                .from('credit_cards')
+                .update({ current_balance: Math.max(0, (card.current_balance ?? 0) - oldAmount) })
+                .eq('id', oldCardId)
+            }
+          }
         }
 
         // Add new amount to new card

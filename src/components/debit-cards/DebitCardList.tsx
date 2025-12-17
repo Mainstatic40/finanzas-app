@@ -55,7 +55,7 @@ export function DebitCardList({ onEdit, onDelete }: Props) {
           holderName={card.holder_name ?? undefined}
           lastFourDigits={card.last_four_digits ?? undefined}
           currentBalance={card.current_balance || 0}
-          isActive={card.is_active}
+          isActive={card.is_active ?? undefined}
           onEdit={() => onEdit(card)}
           onDelete={() => onDelete(card.id)}
         />

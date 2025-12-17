@@ -60,7 +60,7 @@ export function UpcomingPayments() {
             date: paymentDate,
             type: 'credit',
             cardType: credit.credit_cards ? 'credit' : null,
-            cardName: (credit.credit_cards as { name: string } | null)?.name ?? null,
+            cardName: ((Array.isArray(credit.credit_cards) ? credit.credit_cards[0] : credit.credit_cards) as { name: string } | null)?.name ?? null,
           })
         }
       })
@@ -69,8 +69,8 @@ export function UpcomingPayments() {
     // Process subscriptions
     if (subscriptionsRes.data) {
       subscriptionsRes.data.forEach((sub) => {
-        const creditCard = sub.credit_cards as { name: string } | null
-        const debitCard = sub.debit_cards as { name: string } | null
+        const creditCard = (Array.isArray(sub.credit_cards) ? sub.credit_cards[0] : sub.credit_cards) as { name: string } | null
+        const debitCard = (Array.isArray(sub.debit_cards) ? sub.debit_cards[0] : sub.debit_cards) as { name: string } | null
 
         upcomingPayments.push({
           id: sub.id,

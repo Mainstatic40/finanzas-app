@@ -51,7 +51,9 @@ export function ExpensesByCategory() {
       const categoryMap = new Map<string, CategoryExpense>()
 
       data.forEach((transaction) => {
-        const category = transaction.categories as {
+        const category = (Array.isArray(transaction.categories)
+          ? transaction.categories[0]
+          : transaction.categories) as {
           id: string
           name: string
           icon: string | null
