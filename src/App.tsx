@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Login } from '@/pages/Login'
 import { Dashboard } from '@/pages/Dashboard'
 import { Transactions } from '@/pages/Transactions'
-import { CreditCards } from '@/pages/CreditCards'
+import { Cards } from '@/pages/Cards'
 import { Credits } from '@/pages/Credits'
 import { Subscriptions } from '@/pages/Subscriptions'
 import { Categories } from '@/pages/Categories'
@@ -30,10 +30,10 @@ function App() {
           }
         />
         <Route
-          path="/credit-cards"
+          path="/cards"
           element={
             <ProtectedRoute>
-              <CreditCards />
+              <Cards />
             </ProtectedRoute>
           }
         />

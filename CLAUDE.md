@@ -1,4 +1,3 @@
-
 # CLAUDE.md - FinTrack Development Guidelines
 
 ## Project Overview
@@ -9,17 +8,18 @@
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | Vite + React 18+ + TypeScript |
-| UI | Shadcn/ui + Tailwind CSS |
-| Backend | Supabase (PostgreSQL + Auth + Edge Functions) |
-| Hosting | Cloudflare Pages (frontend) + Supabase Cloud (backend) |
-| Auth | Supabase Auth with Google OAuth |
+| Layer    | Technology                                             |
+| -------- | ------------------------------------------------------ |
+| Frontend | Vite + React 18+ + TypeScript                          |
+| UI       | Shadcn/ui + Tailwind CSS                               |
+| Backend  | Supabase (PostgreSQL + Auth + Edge Functions)          |
+| Hosting  | Cloudflare Pages (frontend) + Supabase Cloud (backend) |
+| Auth     | Supabase Auth with Google OAuth                        |
 
 ## Project Setup Status
 
 ### Completed Setup ✅
+
 - [x] Vite 7.x + React 19 + TypeScript initialized
 - [x] Tailwind CSS v4 configured with PostCSS
 - [x] Shadcn/ui initialized (style: new-york, base-color: slate, CSS variables: enabled)
@@ -33,6 +33,7 @@
 - [x] Database migrations created (5 tables)
 
 ### Current Versions
+
 ```json
 {
   "vite": "^7.2.4",
@@ -44,50 +45,61 @@
 ```
 
 ### Pending Setup
-- [ ] React Router DOM
-- [ ] Page components
-- [ ] UI components
+
+- [x] React Router DOM ✅
+- [x] Page components ✅
+- [x] UI components ✅
 
 ## Database Schema
 
 ### Tables (with RLS enabled)
 
-| Table | Description |
-|-------|-------------|
-| `categories` | Income/expense categories with icon and color |
-| `credit_cards` | Credit cards with limits, balance, cut-off and payment days |
-| `credits` | Active loans with payment tracking |
-| `subscriptions` | Recurring subscriptions linked to cards/categories |
-| `transactions` | Income and expense records |
+| Table           | Description                                                    |
+| --------------- | -------------------------------------------------------------- |
+| `categories`    | Income/expense categories with icon and color                  |
+| `credit_cards`  | Credit cards with limits, balance, cut-off and payment days    |
+| `debit_cards`   | Debit cards with balance tracking                              |
+| `credits`       | Active loans/MSI with payment tracking, linked to credit cards |
+| `subscriptions` | Recurring subscriptions linked to cards/categories             |
+| `transactions`  | Income and expense records, linked to cards and credits        |
 
 ### Migrations
+
 ```
 supabase/migrations/
 ├── 20251216195930_create_categories_table.sql
 ├── 20251216200121_create_credit_cards_table.sql
 ├── 20251216200220_create_credits_table.sql
 ├── 20251216200314_create_subscriptions_table.sql
-└── 20251216200411_create_transactions_table.sql
+├── 20251216200411_create_transactions_table.sql
+├── 20251216230000_create_debit_cards_table.sql
+└── 20251216230100_add_debit_card_id_to_transactions.sql
 ```
 
 ### Key Relationships
+
 - All tables have `user_id` → `auth.users(id)` with CASCADE delete
-- `transactions` → `categories`, `credit_cards` (SET NULL on delete)
+- `transactions` → `categories`, `credit_cards`, `debit_cards`, `credits` (SET NULL on delete)
 - `subscriptions` → `categories`, `credit_cards` (SET NULL on delete)
+- `credits` → `credit_cards` (SET NULL on delete)
 
 ### RLS Policies
+
 All tables have 4 policies: SELECT, INSERT, UPDATE, DELETE
+
 - Users can only access their own records (`auth.uid() = user_id`)
 
 ## Core Principles
 
 ### KISS (Keep It Simple, Stupid)
+
 - Before implementing anything, ask: "Is there a simpler way?"
 - No premature abstractions
 - No design patterns unless they solve a current, concrete problem
 - If a solution feels complex, step back and simplify
 
 ### YAGNI (You Aren't Gonna Need It)
+
 - Write code for today's requirements, not hypothetical futures
 - No "just in case" validations
 - No handlers for non-existent edge cases
@@ -95,6 +107,7 @@ All tables have 4 policies: SELECT, INSERT, UPDATE, DELETE
 - Delete commented-out code—git remembers
 
 ### DRY (With Judgment)
+
 - Duplicate code is acceptable if the two instances will likely evolve differently
 - Extract shared logic only after seeing the same pattern 3+ times
 - Two similar functions are not necessarily duplicates—they may serve different purposes
@@ -109,7 +122,7 @@ const uniqueItems = [...new Set(items)];
 const sortedByDate = items.toSorted((a, b) => a.date - b.date);
 
 // ❌ DON'T: Add lodash for things JS does natively
-import _ from 'lodash';
+import _ from "lodash";
 const uniqueItems = _.uniq(items);
 ```
 
@@ -126,11 +139,11 @@ function processTransactionsAndUpdateUIAndSendAnalytics() { ... }
 ```typescript
 // ✅ DO: Descriptive names that eliminate comment need
 const isPaymentOverdue = dueDate < today;
-const activeSubscriptions = subscriptions.filter(s => s.isActive);
+const activeSubscriptions = subscriptions.filter((s) => s.isActive);
 
 // ❌ DON'T: Cryptic names that require comments
 const flag = d < t; // check if overdue
-const subs = s.filter(x => x.a);
+const subs = s.filter((x) => x.a);
 ```
 
 ### Error Handling
@@ -138,9 +151,9 @@ const subs = s.filter(x => x.a);
 ```typescript
 // ✅ DO: Handle specific errors
 async function fetchTransactions() {
-  const { data, error } = await supabase.from('transactions').select();
-  
-  if (error?.code === 'PGRST116') {
+  const { data, error } = await supabase.from("transactions").select();
+
+  if (error?.code === "PGRST116") {
     return []; // No rows found is okay
   }
   if (error) {
@@ -152,10 +165,10 @@ async function fetchTransactions() {
 // ❌ DON'T: Generic try-catch that swallows everything
 async function fetchTransactions() {
   try {
-    const { data } = await supabase.from('transactions').select();
+    const { data } = await supabase.from("transactions").select();
     return data;
   } catch (e) {
-    console.log('error');
+    console.log("error");
     return [];
   }
 }
@@ -201,7 +214,7 @@ class TransactionCard extends React.Component { ... }
 // ✅ DO: Composition over inheritance
 function PaymentCard({ children, dueDate }: Props) {
   return (
-    <Card className={isOverdue(dueDate) ? 'border-red-500' : ''}>
+    <Card className={isOverdue(dueDate) ? "border-red-500" : ""}>
       {children}
     </Card>
   );
@@ -210,7 +223,7 @@ function PaymentCard({ children, dueDate }: Props) {
 // Use it
 <PaymentCard dueDate={credit.paymentDate}>
   <CreditDetails credit={credit} />
-</PaymentCard>
+</PaymentCard>;
 ```
 
 ### State Management
@@ -218,8 +231,8 @@ function PaymentCard({ children, dueDate }: Props) {
 ```typescript
 // ✅ DO: Local state first
 function TransactionForm() {
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
   // ...
 }
 
@@ -232,9 +245,9 @@ function TransactionForm() {
 function TransactionList({ transactions }: Props) {
   // Derived, not stored
   const totalExpenses = transactions
-    .filter(t => t.type === 'expense')
+    .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
-    
+
   // ...
 }
 
@@ -264,11 +277,7 @@ function useSupabaseQuery<T>(table: string, query?: object) {
 ```typescript
 // ✅ DO: Direct event handlers when possible
 function DeleteButton({ onDelete }: Props) {
-  return (
-    <Button onClick={() => onDelete()}>
-      Delete
-    </Button>
-  );
+  return <Button onClick={() => onDelete()}>Delete</Button>;
 }
 
 // ❌ DON'T: useEffect for things events can handle
@@ -292,10 +301,10 @@ useEffect(() => {
 useEffect(() => {
   // Sync with Supabase realtime
   const subscription = supabase
-    .channel('transactions')
-    .on('postgres_changes', { event: '*', schema: 'public' }, handleChange)
+    .channel("transactions")
+    .on("postgres_changes", { event: "*", schema: "public" }, handleChange)
     .subscribe();
-    
+
   return () => subscription.unsubscribe();
 }, []);
 ```
@@ -309,24 +318,41 @@ src/
 │   ├── layout/                # App shell components
 │   │   ├── Header.tsx
 │   │   ├── Sidebar.tsx
-│   │   └── MainLayout.tsx
+│   │   ├── MainLayout.tsx
+│   │   └── ProtectedRoute.tsx
 │   ├── dashboard/             # Dashboard widgets and cards
-│   ├── transactions/          # Feature components
+│   ├── transactions/          # Transaction components
 │   │   ├── TransactionList.tsx
-│   │   ├── TransactionForm.tsx
-│   │   └── TransactionCard.tsx
-│   ├── credit-cards/
-│   ├── credits/
-│   └── subscriptions/
+│   │   └── TransactionForm.tsx
+│   ├── credit-cards/          # Credit card components
+│   │   ├── CreditCardList.tsx
+│   │   └── CreditCardForm.tsx
+│   ├── debit-cards/           # Debit card components
+│   │   ├── DebitCardList.tsx
+│   │   └── DebitCardForm.tsx
+│   ├── credits/               # Credit/loan components
+│   │   ├── CreditList.tsx
+│   │   └── CreditForm.tsx
+│   ├── subscriptions/         # Subscription components
+│   │   ├── SubscriptionList.tsx
+│   │   └── SubscriptionForm.tsx
+│   └── categories/            # Category components
+│       ├── CategoryList.tsx
+│       └── CategoryForm.tsx
 ├── hooks/                     # Only shared hooks (3+ usages)
 │   └── useAuth.ts
 ├── lib/
 │   ├── supabase.ts           # Supabase client instance
+│   ├── icons.ts              # Icon mapping utility
 │   └── utils.ts              # Only truly shared utilities (cn helper)
 ├── pages/                     # Route components
 │   ├── Dashboard.tsx
 │   ├── Transactions.tsx
-│   └── ...
+│   ├── Cards.tsx             # Unified credit/debit cards page
+│   ├── Credits.tsx
+│   ├── Subscriptions.tsx
+│   ├── Categories.tsx
+│   └── Login.tsx
 ├── types/
 │   └── database.ts           # Supabase generated types
 └── App.tsx
@@ -334,15 +360,15 @@ src/
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Components | PascalCase | `TransactionCard.tsx` |
-| Hooks | camelCase with `use` prefix | `useTransactions.ts` |
-| Utilities | camelCase | `formatCurrency.ts` |
-| Types | PascalCase | `Transaction`, `CreditCard` |
-| Constants | UPPER_SNAKE_CASE | `MAX_TRANSACTIONS_PER_PAGE` |
-| Event handlers | `handle` + Event | `handleSubmit`, `handleDelete` |
-| Boolean variables | `is`/`has`/`should` prefix | `isLoading`, `hasError` |
+| Element           | Convention                  | Example                        |
+| ----------------- | --------------------------- | ------------------------------ |
+| Components        | PascalCase                  | `TransactionCard.tsx`          |
+| Hooks             | camelCase with `use` prefix | `useTransactions.ts`           |
+| Utilities         | camelCase                   | `formatCurrency.ts`            |
+| Types             | PascalCase                  | `Transaction`, `CreditCard`    |
+| Constants         | UPPER_SNAKE_CASE            | `MAX_TRANSACTIONS_PER_PAGE`    |
+| Event handlers    | `handle` + Event            | `handleSubmit`, `handleDelete` |
+| Boolean variables | `is`/`has`/`should` prefix  | `isLoading`, `hasError`        |
 
 ## Supabase Conventions
 
@@ -350,27 +376,25 @@ src/
 
 ```typescript
 // ✅ DO: Use the generated types
-import { Database } from '@/types/database';
+import { Database } from "@/types/database";
 
-type Transaction = Database['public']['Tables']['transactions']['Row'];
+type Transaction = Database["public"]["Tables"]["transactions"]["Row"];
 
 // ✅ DO: Select only needed columns
 const { data } = await supabase
-  .from('transactions')
-  .select('id, amount, description, date')
-  .eq('type', 'expense');
+  .from("transactions")
+  .select("id, amount, description, date")
+  .eq("type", "expense");
 
 // ❌ DON'T: Select everything when you need 3 fields
-const { data } = await supabase
-  .from('transactions')
-  .select('*');
+const { data } = await supabase.from("transactions").select("*");
 ```
 
 ### Error Handling
 
 ```typescript
 // ✅ DO: Always check for errors
-const { data, error } = await supabase.from('transactions').select();
+const { data, error } = await supabase.from("transactions").select();
 
 if (error) {
   // Handle appropriately based on context
@@ -378,7 +402,7 @@ if (error) {
 }
 
 // ❌ DON'T: Ignore errors
-const { data } = await supabase.from('transactions').select();
+const { data } = await supabase.from("transactions").select();
 // Proceed assuming data exists...
 ```
 
@@ -386,9 +410,9 @@ const { data } = await supabase.from('transactions').select();
 
 ```typescript
 // ✅ DO: Let TypeScript infer when obvious
-const count = 5;                    // inferred as number
-const items = [1, 2, 3];           // inferred as number[]
-const doubled = items.map(x => x * 2); // inferred
+const count = 5; // inferred as number
+const items = [1, 2, 3]; // inferred as number[]
+const doubled = items.map((x) => x * 2); // inferred
 
 // ✅ DO: Explicit types for function signatures
 function calculateTotal(transactions: Transaction[]): number {
@@ -424,6 +448,7 @@ Before adding any dependency, answer these questions:
 5. **Is this complex enough to warrant a library?** → Consider adding
 
 ### Pre-approved Dependencies
+
 - `@supabase/supabase-js` - Required for backend
 - `react-router-dom` - Routing
 - `date-fns` - Date manipulation (native Date API is painful)
@@ -432,6 +457,7 @@ Before adding any dependency, answer these questions:
 - `recharts` - Charts for dashboard
 
 ### Forbidden Patterns
+
 - No state management libraries (Redux, Zustand, Jotai) unless absolutely necessary
 - No CSS-in-JS libraries (we have Tailwind)
 - No axios (fetch is fine)
@@ -475,20 +501,91 @@ docs: add API documentation for edge functions
 
 ## Quick Reference Card
 
-| Situation | Action |
-|-----------|--------|
-| Need a utility function | Check if native JS/TS can do it first |
-| State needed in one component | `useState` |
-| State needed in parent + children | Lift state up, pass as props |
-| State needed across unrelated components | Consider context (sparingly) |
-| Side effect on user action | Event handler |
-| Side effect on mount/dependency change | `useEffect` |
-| Same logic in 3+ components | Extract to custom hook |
-| Same UI in 3+ places | Extract to component |
-| Complex form | `react-hook-form` + `zod` |
-| Date formatting/manipulation | `date-fns` |
-| Data fetching | Supabase client directly or simple custom hook |
+| Situation                                | Action                                         |
+| ---------------------------------------- | ---------------------------------------------- |
+| Need a utility function                  | Check if native JS/TS can do it first          |
+| State needed in one component            | `useState`                                     |
+| State needed in parent + children        | Lift state up, pass as props                   |
+| State needed across unrelated components | Consider context (sparingly)                   |
+| Side effect on user action               | Event handler                                  |
+| Side effect on mount/dependency change   | `useEffect`                                    |
+| Same logic in 3+ components              | Extract to custom hook                         |
+| Same UI in 3+ places                     | Extract to component                           |
+| Complex form                             | `react-hook-form` + `zod`                      |
+| Date formatting/manipulation             | `date-fns`                                     |
+| Data fetching                            | Supabase client directly or simple custom hook |
 
 ---
 
-*Remember: The best code is code you don't have to write. Keep it simple.*
+_Remember: The best code is code you don't have to write. Keep it simple._
+
+---
+
+## Changelog
+
+### 2024-12-16: Debit Cards & Transaction Improvements
+
+#### New Features
+
+**Debit Cards Support**
+
+- Created `debit_cards` table with RLS policies
+- Added `debit_card_id` foreign key to `transactions` table
+- New components: `DebitCardForm.tsx`, `DebitCardList.tsx`
+- Unified Cards page (`/cards`) with Tabs for credit/debit cards
+
+**Transaction Types**
+
+- Added third UI type: "Pago de crédito" (credit payment)
+- UI type maps to DB type: `credit_payment` → `expense`
+- Improved UX for credit/loan payments
+
+**Card Balance Management**
+
+- Automatic balance updates on transaction create/edit/delete
+- Debit card: income adds, expense subtracts
+- Credit card: expense adds to used balance (non-MSI)
+- Credit (loan): payment reduces balance, marks inactive when paid off
+
+#### UI/UX Improvements
+
+**TransactionList Badges**
+
+- Unified color scheme with distinctive colors:
+  - TC (Credit Card): Violet (`text-violet-600 border-violet-300`)
+  - TD (Debit Card): Emerald (`text-emerald-600 border-emerald-300`)
+  - Pago de crédito: Blue (`text-blue-600 border-blue-300`)
+
+**Cards Page**
+
+- Tabs aligned with "New Card" button
+- Dynamic button text based on active tab
+
+#### Files Modified
+
+| File                                              | Changes                                                    |
+| ------------------------------------------------- | ---------------------------------------------------------- |
+| `src/types/database.ts`                           | Added `debit_cards` table, `debit_card_id` in transactions |
+| `src/components/transactions/TransactionForm.tsx` | Credit payment type, card selectors, balance logic         |
+| `src/components/transactions/TransactionList.tsx` | Debit card JOIN, colored badges                            |
+| `src/pages/Transactions.tsx`                      | Delete handler with balance reversion                      |
+| `src/pages/Credits.tsx`                           | Restore card balance on credit delete                      |
+| `src/pages/Cards.tsx`                             | New unified page with Tabs                                 |
+| `src/components/layout/Sidebar.tsx`               | Route `/cards`, label "Tarjetas"                           |
+| `src/App.tsx`                                     | New `/cards` route                                         |
+
+#### New Files
+
+```
+src/components/debit-cards/
+├── DebitCardForm.tsx
+└── DebitCardList.tsx
+
+supabase/migrations/
+├── 20251216230000_create_debit_cards_table.sql
+└── 20251216230100_add_debit_card_id_to_transactions.sql
+```
+
+#### Deleted Files
+
+- `src/pages/CreditCards.tsx` (replaced by `Cards.tsx`)

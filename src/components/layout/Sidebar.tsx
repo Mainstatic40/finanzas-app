@@ -11,7 +11,7 @@ import {
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/transactions', label: 'Transacciones', icon: ArrowLeftRight },
-  { to: '/credit-cards', label: 'Tarjetas de Crédito', icon: CreditCard },
+  { to: '/cards', label: 'Tarjetas', icon: CreditCard },
   { to: '/credits', label: 'Créditos', icon: Landmark },
   { to: '/subscriptions', label: 'Suscripciones', icon: RefreshCw },
   { to: '/categories', label: 'Categorías', icon: Tags },
