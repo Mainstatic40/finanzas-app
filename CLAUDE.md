@@ -1,93 +1,96 @@
-# CLAUDE.md - FinTrack Development Guidelines
+# FinTrack - Aplicacion de Finanzas Personales
 
-## Project Overview
+## Stack Tecnologico
+- Frontend: Vite + React 18 + TypeScript
+- UI: Tailwind CSS + Shadcn/ui
+- Backend: Supabase (PostgreSQL + Auth + RLS)
+- Autenticacion: Google OAuth
 
-**FinTrack** is a personal finance management web application for a single user. It tracks income, expenses, credit cards, active loans, and subscriptions with payment date visibility.
-
-**Primary Goal:** Build a functional, maintainable app with minimal complexity. Cost optimization is critical—leverage free tiers wherever possible.
-
-## Tech Stack
-
-| Layer    | Technology                                             |
-| -------- | ------------------------------------------------------ |
-| Frontend | Vite + React 18+ + TypeScript                          |
-| UI       | Shadcn/ui + Tailwind CSS                               |
-| Backend  | Supabase (PostgreSQL + Auth + Edge Functions)          |
-| Hosting  | Cloudflare Pages (frontend) + Supabase Cloud (backend) |
-| Auth     | Supabase Auth with Google OAuth                        |
-
-## Project Setup Status
-
-### Completed Setup ✅
-
-- [x] Vite 7.x + React 19 + TypeScript initialized
-- [x] Tailwind CSS v4 configured with PostCSS
-- [x] Shadcn/ui initialized (style: new-york, base-color: slate, CSS variables: enabled)
-- [x] Import alias `@/*` configured in tsconfig.json and vite.config.ts
-- [x] Project folder structure created
-- [x] ESLint configured
-- [x] Environment variables (.env.local, .env.example)
-- [x] Supabase client configured (`src/lib/supabase.ts`)
-- [x] Auth hook created (`src/hooks/useAuth.ts`)
-- [x] Supabase CLI initialized (`supabase/`)
-- [x] Database migrations created (5 tables)
-
-### Current Versions
-
-```json
-{
-  "vite": "^7.2.4",
-  "react": "^19.2.0",
-  "typescript": "~5.9.3",
-  "tailwindcss": "^4.1.18",
-  "@supabase/supabase-js": "^2.88.0"
-}
+## Estructura del Proyecto
+```
+fintrack/
+├── public/
+│   └── bank-logos/          # Logos de bancos (PNG)
+├── src/
+│   ├── components/
+│   │   ├── ui/              # Componentes Shadcn + CardVisual, ServiceLogo
+│   │   ├── layout/          # MainLayout, Sidebar, ProtectedRoute
+│   │   ├── dashboard/       # MonthlyBalance, CardsOverview, UpcomingPayments, ExpensesByCategory
+│   │   ├── transactions/    # TransactionForm, TransactionList
+│   │   ├── credit-cards/    # CreditCardForm, CreditCardList
+│   │   ├── debit-cards/     # DebitCardForm, DebitCardList
+│   │   ├── credits/         # CreditForm, CreditList
+│   │   ├── subscriptions/   # SubscriptionForm, SubscriptionList
+│   │   └── categories/      # CategoryForm, CategoryList
+│   ├── hooks/
+│   │   └── useAuth.ts       # Hook de autenticacion
+│   ├── lib/
+│   │   ├── supabase.ts      # Cliente Supabase
+│   │   ├── utils.ts         # Utilidad cn() para clases
+│   │   ├── icons.ts         # Helper para iconos de categorias
+│   │   ├── bank-styles.ts   # Estilos visuales por banco
+│   │   ├── service-logos.ts # Mapeo de logos de servicios
+│   │   └── subscription-types.ts # Tipos de suscripcion y providers
+│   ├── pages/
+│   │   ├── Login.tsx
+│   │   ├── Dashboard.tsx
+│   │   ├── Transactions.tsx
+│   │   ├── Cards.tsx        # Unifica credito y debito con Tabs
+│   │   ├── Credits.tsx
+│   │   ├── Subscriptions.tsx
+│   │   └── Categories.tsx
+│   └── types/
+│       └── database.ts      # Tipos generados de Supabase
+├── supabase/
+│   └── migrations/          # Migraciones SQL
+└── CLAUDE.md
 ```
 
-### Pending Setup
+## Base de Datos (Tablas con RLS)
+- **categories**: Categorias de ingresos/gastos con icono y color
+- **credit_cards**: Tarjetas de credito con bank_id, limite, saldo, dias corte/pago
+- **debit_cards**: Tarjetas de debito con bank_id y saldo
+- **credits**: Creditos/prestamos vinculados a tarjetas (MSI)
+- **subscriptions**: Suscripciones recurrentes con tipo y provider
+- **transactions**: Transacciones con tipo income/expense/credit_payment
 
-- [x] React Router DOM ✅
-- [x] Page components ✅
-- [x] UI components ✅
-
-## Database Schema
-
-### Tables (with RLS enabled)
-
-| Table           | Description                                                    |
-| --------------- | -------------------------------------------------------------- |
-| `categories`    | Income/expense categories with icon and color                  |
-| `credit_cards`  | Credit cards with limits, balance, cut-off and payment days    |
-| `debit_cards`   | Debit cards with balance tracking                              |
-| `credits`       | Active loans/MSI with payment tracking, linked to credit cards |
-| `subscriptions` | Recurring subscriptions linked to cards/categories             |
-| `transactions`  | Income and expense records, linked to cards and credits        |
-
-### Migrations
-
-```
-supabase/migrations/
-├── 20251216195930_create_categories_table.sql
-├── 20251216200121_create_credit_cards_table.sql
-├── 20251216200220_create_credits_table.sql
-├── 20251216200314_create_subscriptions_table.sql
-├── 20251216200411_create_transactions_table.sql
-├── 20251216230000_create_debit_cards_table.sql
-└── 20251216230100_add_debit_card_id_to_transactions.sql
-```
-
-### Key Relationships
-
-- All tables have `user_id` → `auth.users(id)` with CASCADE delete
+### Relaciones Clave
+- Todas las tablas tienen `user_id` → `auth.users(id)` con CASCADE delete
 - `transactions` → `categories`, `credit_cards`, `debit_cards`, `credits` (SET NULL on delete)
 - `subscriptions` → `categories`, `credit_cards` (SET NULL on delete)
 - `credits` → `credit_cards` (SET NULL on delete)
 
-### RLS Policies
+## Logica de Negocio Importante
 
-All tables have 4 policies: SELECT, INSERT, UPDATE, DELETE
+### Tarjetas de Credito
+- current_balance = monto usado/comprometido
+- disponible = credit_limit - current_balance
+- Al crear credito MSI: suma original_amount al current_balance de la tarjeta
+- Al pagar credito completamente: libera el monto en la tarjeta
 
-- Users can only access their own records (`auth.uid() = user_id`)
+### Creditos (MSI)
+- Vinculados a una tarjeta de credito
+- Los pagos reducen current_balance del credito
+- Cuando balance llega a 0: is_active = false, libera linea de la tarjeta
+
+### Transacciones
+- Tipo ingreso + debito: suma saldo a tarjeta
+- Tipo gasto + debito: resta saldo de tarjeta
+- Tipo gasto + credito (sin MSI): suma al usado de la tarjeta
+- Tipo pago de credito: reduce saldo del credito, puede liberar tarjeta
+
+## Componentes Visuales Especiales
+
+### CardVisual (src/components/ui/CardVisual.tsx)
+- Tarjeta con aspecto fisico realista
+- Efecto flip 3D para mostrar detalles/acciones
+- Estilos por banco definidos en bank-styles.ts
+- Props: type, bankId, cardName, holderName, lastFourDigits, currentBalance, etc.
+
+### ServiceLogo (src/components/ui/ServiceLogo.tsx)
+- Logos de servicios de suscripcion
+- Usa @icons-pack/react-simple-icons
+- Fallback a Globe si no encuentra el servicio
 
 ## Core Principles
 
@@ -309,53 +312,19 @@ useEffect(() => {
 }, []);
 ```
 
-## File Structure
+## Dependencias Principales
+- @supabase/supabase-js
+- react-router-dom
+- react-hook-form + zod
+- date-fns
+- lucide-react
+- @icons-pack/react-simple-icons
 
-```
-src/
-├── components/
-│   ├── ui/                    # Shadcn components (don't modify)
-│   ├── layout/                # App shell components
-│   │   ├── Header.tsx
-│   │   ├── Sidebar.tsx
-│   │   ├── MainLayout.tsx
-│   │   └── ProtectedRoute.tsx
-│   ├── dashboard/             # Dashboard widgets and cards
-│   ├── transactions/          # Transaction components
-│   │   ├── TransactionList.tsx
-│   │   └── TransactionForm.tsx
-│   ├── credit-cards/          # Credit card components
-│   │   ├── CreditCardList.tsx
-│   │   └── CreditCardForm.tsx
-│   ├── debit-cards/           # Debit card components
-│   │   ├── DebitCardList.tsx
-│   │   └── DebitCardForm.tsx
-│   ├── credits/               # Credit/loan components
-│   │   ├── CreditList.tsx
-│   │   └── CreditForm.tsx
-│   ├── subscriptions/         # Subscription components
-│   │   ├── SubscriptionList.tsx
-│   │   └── SubscriptionForm.tsx
-│   └── categories/            # Category components
-│       ├── CategoryList.tsx
-│       └── CategoryForm.tsx
-├── hooks/                     # Only shared hooks (3+ usages)
-│   └── useAuth.ts
-├── lib/
-│   ├── supabase.ts           # Supabase client instance
-│   ├── icons.ts              # Icon mapping utility
-│   └── utils.ts              # Only truly shared utilities (cn helper)
-├── pages/                     # Route components
-│   ├── Dashboard.tsx
-│   ├── Transactions.tsx
-│   ├── Cards.tsx             # Unified credit/debit cards page
-│   ├── Credits.tsx
-│   ├── Subscriptions.tsx
-│   ├── Categories.tsx
-│   └── Login.tsx
-├── types/
-│   └── database.ts           # Supabase generated types
-└── App.tsx
+## Comandos Utiles
+```bash
+npm run dev                    # Servidor de desarrollo
+npx supabase db push          # Aplicar migraciones
+npx supabase gen types typescript --linked > src/types/database.ts  # Regenerar tipos
 ```
 
 ## Naming Conventions
@@ -437,33 +406,6 @@ type TransactionFormData = {
 interface ITransactionFormData { ... }
 ```
 
-## Dependencies Policy
-
-Before adding any dependency, answer these questions:
-
-1. **Can native JS/TS do this?** → Use native
-2. **Does React already provide this?** → Use React
-3. **Does Shadcn/ui have this component?** → Use Shadcn
-4. **Is this a one-time use?** → Write it yourself
-5. **Is this complex enough to warrant a library?** → Consider adding
-
-### Pre-approved Dependencies
-
-- `@supabase/supabase-js` - Required for backend
-- `react-router-dom` - Routing
-- `date-fns` - Date manipulation (native Date API is painful)
-- `zod` - Form validation (pairs well with react-hook-form)
-- `react-hook-form` - Form state management
-- `recharts` - Charts for dashboard
-
-### Forbidden Patterns
-
-- No state management libraries (Redux, Zustand, Jotai) unless absolutely necessary
-- No CSS-in-JS libraries (we have Tailwind)
-- No axios (fetch is fine)
-- No lodash (use native methods)
-- No moment.js (use date-fns)
-
 ## Git Commit Messages
 
 ```
@@ -518,74 +460,3 @@ docs: add API documentation for edge functions
 ---
 
 _Remember: The best code is code you don't have to write. Keep it simple._
-
----
-
-## Changelog
-
-### 2024-12-16: Debit Cards & Transaction Improvements
-
-#### New Features
-
-**Debit Cards Support**
-
-- Created `debit_cards` table with RLS policies
-- Added `debit_card_id` foreign key to `transactions` table
-- New components: `DebitCardForm.tsx`, `DebitCardList.tsx`
-- Unified Cards page (`/cards`) with Tabs for credit/debit cards
-
-**Transaction Types**
-
-- Added third UI type: "Pago de crédito" (credit payment)
-- UI type maps to DB type: `credit_payment` → `expense`
-- Improved UX for credit/loan payments
-
-**Card Balance Management**
-
-- Automatic balance updates on transaction create/edit/delete
-- Debit card: income adds, expense subtracts
-- Credit card: expense adds to used balance (non-MSI)
-- Credit (loan): payment reduces balance, marks inactive when paid off
-
-#### UI/UX Improvements
-
-**TransactionList Badges**
-
-- Unified color scheme with distinctive colors:
-  - TC (Credit Card): Violet (`text-violet-600 border-violet-300`)
-  - TD (Debit Card): Emerald (`text-emerald-600 border-emerald-300`)
-  - Pago de crédito: Blue (`text-blue-600 border-blue-300`)
-
-**Cards Page**
-
-- Tabs aligned with "New Card" button
-- Dynamic button text based on active tab
-
-#### Files Modified
-
-| File                                              | Changes                                                    |
-| ------------------------------------------------- | ---------------------------------------------------------- |
-| `src/types/database.ts`                           | Added `debit_cards` table, `debit_card_id` in transactions |
-| `src/components/transactions/TransactionForm.tsx` | Credit payment type, card selectors, balance logic         |
-| `src/components/transactions/TransactionList.tsx` | Debit card JOIN, colored badges                            |
-| `src/pages/Transactions.tsx`                      | Delete handler with balance reversion                      |
-| `src/pages/Credits.tsx`                           | Restore card balance on credit delete                      |
-| `src/pages/Cards.tsx`                             | New unified page with Tabs                                 |
-| `src/components/layout/Sidebar.tsx`               | Route `/cards`, label "Tarjetas"                           |
-| `src/App.tsx`                                     | New `/cards` route                                         |
-
-#### New Files
-
-```
-src/components/debit-cards/
-├── DebitCardForm.tsx
-└── DebitCardList.tsx
-
-supabase/migrations/
-├── 20251216230000_create_debit_cards_table.sql
-└── 20251216230100_add_debit_card_id_to_transactions.sql
-```
-
-#### Deleted Files
-
-- `src/pages/CreditCards.tsx` (replaced by `Cards.tsx`)
