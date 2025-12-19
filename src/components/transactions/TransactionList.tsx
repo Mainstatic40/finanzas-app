@@ -5,6 +5,7 @@ import { getIconByName } from '@/lib/icons'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { Tables } from '@/types/database'
+import type { TransactionFilters } from './TransactionFilters'
 
 type Transaction = Tables<'transactions'> & {
   categories: { name: string; icon: string | null; color: string | null } | null
@@ -14,21 +15,23 @@ type Transaction = Tables<'transactions'> & {
 }
 
 type Props = {
+  filters: TransactionFilters
   onEdit: (transaction: Transaction) => void
   onDelete: (id: string) => void
 }
 
-export function TransactionList({ onEdit, onDelete }: Props) {
+export function TransactionList({ filters, onEdit, onDelete }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchTransactions()
-  }, [])
+  }, [filters])
 
   async function fetchTransactions() {
     setLoading(true)
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('transactions')
       .select(`
         *,
@@ -37,7 +40,28 @@ export function TransactionList({ onEdit, onDelete }: Props) {
         debit_cards (name, bank),
         credits (name, institution)
       `)
-      .order('date', { ascending: false })
+
+    // Apply filters dynamically
+    if (filters.dateFrom) {
+      query = query.gte('date', filters.dateFrom)
+    }
+    if (filters.dateTo) {
+      query = query.lte('date', filters.dateTo)
+    }
+    if (filters.categoryId) {
+      query = query.eq('category_id', filters.categoryId)
+    }
+    if (filters.type) {
+      query = query.eq('type', filters.type)
+    }
+    if (filters.creditCardId) {
+      query = query.eq('credit_card_id', filters.creditCardId)
+    }
+    if (filters.debitCardId) {
+      query = query.eq('debit_card_id', filters.debitCardId)
+    }
+
+    const { data, error } = await query.order('date', { ascending: false })
 
     if (error) {
       console.error('Error fetching transactions:', error)
@@ -62,16 +86,33 @@ export function TransactionList({ onEdit, onDelete }: Props) {
     })
   }
 
+  const hasActiveFilters =
+    filters.dateFrom ||
+    filters.dateTo ||
+    filters.categoryId ||
+    filters.type ||
+    filters.creditCardId ||
+    filters.debitCardId
+
   if (loading) {
     return <p className="text-slate-600">Cargando transacciones...</p>
   }
 
   if (transactions.length === 0) {
-    return <p className="text-slate-600">No hay transacciones. Crea una nueva.</p>
+    return (
+      <p className="text-slate-600">
+        {hasActiveFilters
+          ? 'No se encontraron transacciones con los filtros seleccionados.'
+          : 'No hay transacciones. Crea una nueva.'}
+      </p>
+    )
   }
 
   return (
     <div className="space-y-2">
+      <p className="text-sm text-slate-600 mb-4">
+        Mostrando {transactions.length} transaccion{transactions.length !== 1 ? 'es' : ''}
+      </p>
       {transactions.map((transaction) => {
         const isIncome = transaction.type === 'income'
         const CategoryIcon = transaction.categories

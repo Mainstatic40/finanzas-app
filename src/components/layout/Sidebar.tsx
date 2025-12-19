@@ -5,6 +5,7 @@ import {
   CreditCard,
   Landmark,
   RefreshCw,
+  Calendar,
   Tags,
 } from 'lucide-react'
 
@@ -14,6 +15,7 @@ const navItems = [
   { to: '/cards', label: 'Tarjetas', icon: CreditCard },
   { to: '/credits', label: 'Créditos', icon: Landmark },
   { to: '/subscriptions', label: 'Suscripciones', icon: RefreshCw },
+  { to: '/calendar', label: 'Calendario', icon: Calendar },
   { to: '/categories', label: 'Categorías', icon: Tags },
 ]
 

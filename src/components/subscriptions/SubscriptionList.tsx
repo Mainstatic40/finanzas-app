@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Mail, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { getIconByName } from '@/lib/icons'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { ServiceLogo } from '@/components/ui/ServiceLogo'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import type { Tables } from '@/types/database'
 
 type Subscription = Tables<'subscriptions'> & {
@@ -103,9 +106,6 @@ export function SubscriptionList({ onEdit, onDelete }: Props) {
   return (
     <div className="space-y-3">
       {subscriptions.map((subscription) => {
-        const CategoryIcon = subscription.categories
-          ? getIconByName(subscription.categories.icon)
-          : null
         const daysUntil = getDaysUntilBilling(subscription.next_billing_date)
 
         return (
@@ -113,126 +113,125 @@ export function SubscriptionList({ onEdit, onDelete }: Props) {
             key={subscription.id}
             className={`p-4 bg-white rounded-lg border ${getBorderClass(subscription)}`}
           >
-            <div className="flex items-start justify-between gap-4">
-              {/* Left side: Icon and info */}
-              <div className="flex items-start gap-4 flex-1">
-                {/* Service Logo */}
-                <div className="p-2 rounded-lg bg-slate-100">
+            <div className="flex items-start gap-4">
+              {/* Logo - centrado verticalmente */}
+              <div className="flex-shrink-0 self-center">
+                <div className="p-3 rounded-xl bg-slate-100">
                   <ServiceLogo
                     serviceName={subscription.provider || subscription.name}
-                    size={24}
+                    size={32}
                   />
-                </div>
-
-                {/* Main info */}
-                <div className="flex-1 space-y-2">
-                  {/* Name and provider */}
-                  <div>
-                    <h3 className="font-medium text-slate-900">
-                      {subscription.name}
-                    </h3>
-                    {subscription.provider && subscription.provider !== subscription.name && (
-                      <p className="text-sm text-slate-500">{subscription.provider}</p>
-                    )}
-                  </div>
-
-                  {/* Badges row */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Billing cycle */}
-                    <Badge variant="secondary" className="text-xs">
-                      {getBillingCycleLabel(subscription.billing_cycle)}
-                    </Badge>
-
-                    {/* Category */}
-                    {subscription.categories && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs flex items-center gap-1"
-                        style={{
-                          borderColor: subscription.categories.color ?? undefined,
-                          color: subscription.categories.color ?? undefined,
-                        }}
-                      >
-                        {CategoryIcon && (
-                          <CategoryIcon className="h-3 w-3" />
-                        )}
-                        {subscription.categories.name}
-                      </Badge>
-                    )}
-
-                    {/* Card badge */}
-                    {subscription.credit_cards ? (
-                      <Badge
-                        variant="outline"
-                        className="text-xs text-violet-600 border-violet-300"
-                      >
-                        TC: {subscription.credit_cards.name}
-                      </Badge>
-                    ) : subscription.debit_cards ? (
-                      <Badge
-                        variant="outline"
-                        className="text-xs text-emerald-600 border-emerald-300"
-                      >
-                        TD: {subscription.debit_cards.name}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs text-slate-400">
-                        Sin tarjeta
-                      </Badge>
-                    )}
-
-                    {/* Active/Inactive */}
-                    <Badge
-                      variant={subscription.is_active ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {subscription.is_active ? 'Activo' : 'Inactivo'}
-                    </Badge>
-                  </div>
-
-                  {/* Next billing date */}
-                  <div className="text-sm">
-                    <span className="text-slate-500">Próximo cobro: </span>
-                    <span
-                      className={
-                        daysUntil < 0
-                          ? 'text-red-600 font-medium'
-                          : daysUntil <= 7
-                            ? 'text-yellow-600 font-medium'
-                            : 'text-slate-700'
-                      }
-                    >
-                      {formatDate(subscription.next_billing_date)}
-                      {daysUntil < 0 && ` (vencido hace ${Math.abs(daysUntil)} días)`}
-                      {daysUntil === 0 && ' (hoy)'}
-                      {daysUntil === 1 && ' (mañana)'}
-                      {daysUntil > 1 && daysUntil <= 7 && ` (en ${daysUntil} días)`}
-                    </span>
-                  </div>
                 </div>
               </div>
 
-              {/* Right side: Amount and actions */}
-              <div className="flex flex-col items-end gap-2">
-                <span className="text-lg font-semibold text-slate-900">
-                  {formatCurrency(subscription.amount, subscription.currency)}
-                </span>
+              {/* Contenido - crece para ocupar espacio */}
+              <div className="flex-1 min-w-0 space-y-1.5">
+                {/* Nombre */}
+                <h3 className="font-semibold text-lg text-slate-900 truncate">
+                  {subscription.name}
+                </h3>
 
-                <div className="flex items-center gap-1">
+                {/* Correo */}
+                {(subscription as any).account_email && (
+                  <p className="flex items-center gap-1.5 text-sm text-slate-500">
+                    <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="truncate">{(subscription as any).account_email}</span>
+                  </p>
+                )}
+
+                {/* Badges row */}
+                <div className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
+                  <span>{getBillingCycleLabel(subscription.billing_cycle)}</span>
+                  <span className="text-slate-300">·</span>
+
+                  {subscription.credit_cards ? (
+                    <span className="text-violet-600">TC: {subscription.credit_cards.name}</span>
+                  ) : subscription.debit_cards ? (
+                    <span className="text-emerald-600">TD: {subscription.debit_cards.name}</span>
+                  ) : (
+                    <span className="text-slate-400">Sin tarjeta</span>
+                  )}
+
+                  <span className="text-slate-300">·</span>
+                  <span className={subscription.is_active ? 'text-green-600' : 'text-slate-400'}>
+                    {subscription.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
+
+                  {/* Notes indicator */}
+                  {(subscription as any).notes && (
+                    <>
+                      <span className="text-slate-300">·</span>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-700 transition-colors"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            <span>Notas</span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 text-sm">
+                          <p className="whitespace-pre-wrap text-slate-700">
+                            {(subscription as any).notes}
+                          </p>
+                        </PopoverContent>
+                      </Popover>
+                    </>
+                  )}
+                </div>
+
+                {/* Próximo cobro */}
+                <p className="text-sm">
+                  <span className="text-slate-500">Próximo cobro: </span>
+                  <span
+                    className={
+                      daysUntil < 0
+                        ? 'text-red-600 font-medium'
+                        : daysUntil <= 7
+                          ? 'text-yellow-600 font-medium'
+                          : 'text-slate-700'
+                    }
+                  >
+                    {formatDate(subscription.next_billing_date)}
+                    {daysUntil < 0 && ` (vencido hace ${Math.abs(daysUntil)} días)`}
+                    {daysUntil === 0 && ' (hoy)'}
+                    {daysUntil === 1 && ' (mañana)'}
+                    {daysUntil > 1 && daysUntil <= 7 && ` (en ${daysUntil} días)`}
+                  </span>
+                </p>
+              </div>
+
+              {/* Columna derecha - acciones y precio */}
+              <div className="flex flex-col items-end justify-between self-stretch">
+                {/* Botones arriba */}
+                <div className="flex gap-0.5">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8"
                     onClick={() => onEdit(subscription)}
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8"
                     onClick={() => onDelete(subscription.id)}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
+                </div>
+
+                {/* Precio abajo */}
+                <div className="text-right mt-auto pt-2">
+                  <span className="text-xl font-bold text-slate-900">
+                    {formatCurrency(subscription.amount, subscription.currency).replace(/\s/g, '')}
+                  </span>
+                  <span className="text-xs text-slate-500 ml-1">
+                    {subscription.currency || 'MXN'}
+                  </span>
                 </div>
               </div>
             </div>

@@ -21,7 +21,8 @@ fintrack/
 │   │   ├── debit-cards/     # DebitCardForm, DebitCardList
 │   │   ├── credits/         # CreditForm, CreditList
 │   │   ├── subscriptions/   # SubscriptionForm, SubscriptionList
-│   │   └── categories/      # CategoryForm, CategoryList
+│   │   ├── categories/      # CategoryForm, CategoryList
+│   │   └── calendar/        # PaymentCalendar, DayPaymentsDialog
 │   ├── hooks/
 │   │   └── useAuth.ts       # Hook de autenticacion
 │   ├── lib/
@@ -38,6 +39,7 @@ fintrack/
 │   │   ├── Cards.tsx        # Unifica credito y debito con Tabs
 │   │   ├── Credits.tsx
 │   │   ├── Subscriptions.tsx
+│   │   ├── Calendar.tsx     # Calendario visual de pagos
 │   │   └── Categories.tsx
 │   └── types/
 │       └── database.ts      # Tipos generados de Supabase
@@ -91,6 +93,41 @@ fintrack/
 - Logos de servicios de suscripcion
 - Usa @icons-pack/react-simple-icons
 - Fallback a Globe si no encuentra el servicio
+
+### PaymentCalendar (src/components/calendar/PaymentCalendar.tsx)
+- Calendario visual estilo Google Calendar para pagos del mes
+- Muestra creditos y suscripciones con chips de colores:
+  - Azul (bg-blue-100/text-blue-700): creditos
+  - Morado (bg-purple-100/text-purple-700): suscripciones
+- Navegacion entre meses con formato español (MMMM yyyy)
+- Click en dia abre modal con detalles de pagos
+- Footer con resumen: total del mes + conteo por tipo
+- Props: month (Date), onMonthChange ((date: Date) => void)
+
+### DayPaymentsDialog (src/components/calendar/DayPaymentsDialog.tsx)
+- Modal para mostrar pagos de un dia especifico
+- Header con fecha formateada ("Miercoles 15 de Diciembre")
+- Lista de pagos con icono, nombre, badge de tarjeta y monto
+- Footer con total del dia
+- Props: isOpen, onClose, date, payments[]
+
+## Logica de Calculo de Pagos
+
+### Creditos
+- Se muestran en su `payment_day` de cada mes
+- Todos los creditos activos se pagan mensualmente
+
+### Suscripciones (segun billing_cycle)
+- **monthly**: se cobra en `billing_day` cada mes
+- **weekly**: se cobra cada semana en el dia correspondiente
+- **yearly**: se cobra solo si `next_billing_date` cae en el mes
+
+### Auto-calculo de next_billing_date (SubscriptionForm)
+- Al cambiar `billing_day` o `billing_cycle`, se calcula automaticamente
+- monthly: si el dia ya paso → proximo mes, si no → mes actual
+- weekly: proximo dia de la semana correspondiente
+- yearly: si ya paso este año → proximo año
+- El usuario puede editar manualmente para casos especiales (pruebas gratuitas)
 
 ## Core Principles
 
@@ -438,6 +475,19 @@ docs: add API documentation for edge functions
 - Validate user input with Zod before sending to database
 - Store only last 4 digits of credit cards
 - Use environment variables for all secrets
+
+## Rutas de la Aplicacion
+
+| Ruta            | Pagina         | Descripcion                              |
+| --------------- | -------------- | ---------------------------------------- |
+| `/`             | Dashboard      | Vista general con resumen financiero     |
+| `/transactions` | Transactions   | Lista y gestion de transacciones         |
+| `/cards`        | Cards          | Tarjetas de credito y debito (con Tabs)  |
+| `/credits`      | Credits        | Creditos y MSI activos                   |
+| `/subscriptions`| Subscriptions  | Suscripciones recurrentes                |
+| `/calendar`     | Calendar       | Calendario visual de pagos               |
+| `/categories`   | Categories     | Categorias de ingresos/gastos            |
+| `/login`        | Login          | Autenticacion con Google OAuth           |
 
 ---
 

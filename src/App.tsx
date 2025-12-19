@@ -5,6 +5,7 @@ import { Transactions } from '@/pages/Transactions'
 import { Cards } from '@/pages/Cards'
 import { Credits } from '@/pages/Credits'
 import { Subscriptions } from '@/pages/Subscriptions'
+import { Calendar } from '@/pages/Calendar'
 import { Categories } from '@/pages/Categories'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 
@@ -50,6 +51,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Subscriptions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <Calendar />
             </ProtectedRoute>
           }
         />

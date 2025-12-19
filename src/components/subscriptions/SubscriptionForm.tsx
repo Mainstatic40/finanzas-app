@@ -2,7 +2,16 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check, ChevronsUpDown, Mail, FileText } from 'lucide-react'
+import {
+  format,
+  setDate,
+  addMonths,
+  addYears,
+  addWeeks,
+  getDate,
+  startOfDay,
+} from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -13,8 +22,10 @@ import {
   getTypeById,
 } from '@/lib/subscription-types'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
@@ -55,6 +66,8 @@ const subscriptionSchema = z.object({
   debit_card_id: z.string().optional(),
   provider: z.string().optional(),
   subscription_type: z.string().optional(),
+  account_email: z.string().email('Email inválido').optional().or(z.literal('')),
+  notes: z.string().optional(),
   is_active: z.boolean().default(true),
 })
 
@@ -115,6 +128,8 @@ export function SubscriptionForm({ onSuccess, initialData }: Props) {
       debit_card_id: initialData?.debit_card_id ?? '',
       provider: initialData?.provider ?? '',
       subscription_type: initialData?.subscription_type ?? '',
+      account_email: (initialData as any)?.account_email ?? '',
+      notes: (initialData as any)?.notes ?? '',
       is_active: initialData?.is_active ?? true,
     },
   })
@@ -123,6 +138,8 @@ export function SubscriptionForm({ onSuccess, initialData }: Props) {
   const isActive = watch('is_active')
   const selectedCreditCardId = watch('credit_card_id') || ''
   const selectedDebitCardId = watch('debit_card_id') || ''
+  const billingDay = watch('billing_day')
+  const billingCycle = watch('billing_cycle')
 
   // Fetch data on mount
   useEffect(() => {
@@ -169,6 +186,49 @@ export function SubscriptionForm({ onSuccess, initialData }: Props) {
     }
   }, [paymentType, setValue])
 
+  // Auto-calculate next_billing_date when billing_day or billing_cycle changes
+  useEffect(() => {
+    if (!billingDay || !billingCycle) return
+
+    const today = startOfDay(new Date())
+    const currentDay = getDate(today)
+    let nextDate: Date
+
+    switch (billingCycle) {
+      case 'weekly': {
+        // Para semanal, billing_day representa el día de la semana (1-7, donde 1 es lunes)
+        // Pero como estamos usando 1-31, interpretamos como: próximo día que sea ese número de día
+        // O mejor: calcular el próximo día de la semana basado en el día actual
+        const daysUntilNext = (billingDay - today.getDay() + 7) % 7
+        nextDate = daysUntilNext === 0 ? addWeeks(today, 1) : new Date(today.getTime() + daysUntilNext * 24 * 60 * 60 * 1000)
+        break
+      }
+
+      case 'yearly': {
+        // Para anual, usar el día del mes actual
+        nextDate = setDate(today, Math.min(billingDay, 28))
+        // Si ya pasó este año, ir al próximo año
+        if (nextDate <= today) {
+          nextDate = addYears(nextDate, 1)
+        }
+        break
+      }
+
+      case 'monthly':
+      default: {
+        // Para mensual: si el día ya pasó, usar el próximo mes
+        nextDate = setDate(today, Math.min(billingDay, 28))
+        if (billingDay <= currentDay) {
+          nextDate = addMonths(nextDate, 1)
+          nextDate = setDate(nextDate, Math.min(billingDay, 28))
+        }
+        break
+      }
+    }
+
+    setValue('next_billing_date', format(nextDate, 'yyyy-MM-dd'))
+  }, [billingDay, billingCycle, setValue])
+
   // Get providers for selected type
   const availableProviders = selectedType ? getProvidersByType(selectedType) : []
   const subscriptionTypes = getAllTypes()
@@ -188,6 +248,8 @@ export function SubscriptionForm({ onSuccess, initialData }: Props) {
       debit_card_id: data.debit_card_id || null,
       provider: data.provider || null,
       subscription_type: data.subscription_type || null,
+      account_email: data.account_email || null,
+      notes: data.notes || null,
       is_active: data.is_active,
       user_id: user.id,
     }
@@ -382,6 +444,37 @@ export function SubscriptionForm({ onSuccess, initialData }: Props) {
         </Popover>
       </div>
 
+      {/* Account Email */}
+      <div className="space-y-2">
+        <Label htmlFor="account_email" className="flex items-center gap-2">
+          <Mail className="h-4 w-4" />
+          Correo de la cuenta
+        </Label>
+        <Input
+          id="account_email"
+          type="email"
+          placeholder="correo@ejemplo.com"
+          {...register('account_email')}
+        />
+        {errors.account_email && (
+          <p className="text-sm text-red-500">{errors.account_email.message}</p>
+        )}
+      </div>
+
+      {/* Notes */}
+      <div className="space-y-2">
+        <Label htmlFor="notes" className="flex items-center gap-2">
+          <FileText className="h-4 w-4" />
+          Notas
+        </Label>
+        <Textarea
+          id="notes"
+          placeholder="Notas adicionales..."
+          rows={3}
+          {...register('notes')}
+        />
+      </div>
+
       {/* Name */}
       <div className="space-y-2">
         <Label htmlFor="name">Nombre de la suscripción</Label>
@@ -469,12 +562,15 @@ export function SubscriptionForm({ onSuccess, initialData }: Props) {
 
       {/* Next Billing Date */}
       <div className="space-y-2">
-        <Label htmlFor="next_billing_date">Próxima fecha de cobro</Label>
-        <Input
-          id="next_billing_date"
-          type="date"
-          {...register('next_billing_date')}
+        <Label>Próxima fecha de cobro</Label>
+        <DatePicker
+          value={watch('next_billing_date') ? new Date(watch('next_billing_date') + 'T00:00:00') : undefined}
+          onChange={(date) => setValue('next_billing_date', date ? format(date, 'yyyy-MM-dd') : '')}
+          placeholder="Seleccionar fecha"
         />
+        <p className="text-xs text-muted-foreground">
+          Se calcula automáticamente. Puedes editarlo para pruebas gratuitas o casos especiales.
+        </p>
         {errors.next_billing_date && (
           <p className="text-sm text-red-500">{errors.next_billing_date.message}</p>
         )}

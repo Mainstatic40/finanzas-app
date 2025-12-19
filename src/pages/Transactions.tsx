@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { TransactionList } from '@/components/transactions/TransactionList'
+import {
+  TransactionFiltersComponent,
+  type TransactionFilters,
+} from '@/components/transactions/TransactionFilters'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,10 +24,45 @@ type Transaction = Tables<'transactions'> & {
   credits: { name: string; institution: string } | null
 }
 
+type Category = { id: string; name: string }
+type Card = { id: string; name: string }
+
 export function Transactions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // Filter state
+  const [filters, setFilters] = useState<TransactionFilters>({
+    dateFrom: null,
+    dateTo: null,
+    categoryId: null,
+    type: null,
+    creditCardId: null,
+    debitCardId: null,
+  })
+
+  // Data for filters
+  const [categories, setCategories] = useState<Category[]>([])
+  const [creditCards, setCreditCards] = useState<Card[]>([])
+  const [debitCards, setDebitCards] = useState<Card[]>([])
+
+  // Fetch filter data on mount
+  useEffect(() => {
+    async function fetchFilterData() {
+      const [categoriesRes, creditCardsRes, debitCardsRes] = await Promise.all([
+        supabase.from('categories').select('id, name').order('name'),
+        supabase.from('credit_cards').select('id, name').order('name'),
+        supabase.from('debit_cards').select('id, name').order('name'),
+      ])
+
+      if (categoriesRes.data) setCategories(categoriesRes.data)
+      if (creditCardsRes.data) setCreditCards(creditCardsRes.data)
+      if (debitCardsRes.data) setDebitCards(debitCardsRes.data)
+    }
+
+    fetchFilterData()
+  }, [])
 
   function handleNewTransaction() {
     setEditingTransaction(null)
@@ -144,8 +183,17 @@ export function Transactions() {
           </Button>
         </div>
 
+        <TransactionFiltersComponent
+          filters={filters}
+          onFiltersChange={setFilters}
+          categories={categories}
+          creditCards={creditCards}
+          debitCards={debitCards}
+        />
+
         <TransactionList
           key={refreshKey}
+          filters={filters}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />

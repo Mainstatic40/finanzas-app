@@ -217,6 +217,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          account_email: string | null
           amount: number
           billing_cycle: string
           billing_day: number
@@ -229,11 +230,13 @@ export type Database = {
           is_active: boolean | null
           name: string
           next_billing_date: string
+          notes: string | null
           provider: string | null
           subscription_type: string | null
           user_id: string
         }
         Insert: {
+          account_email?: string | null
           amount: number
           billing_cycle: string
           billing_day: number
@@ -246,11 +249,13 @@ export type Database = {
           is_active?: boolean | null
           name: string
           next_billing_date: string
+          notes?: string | null
           provider?: string | null
           subscription_type?: string | null
           user_id: string
         }
         Update: {
+          account_email?: string | null
           amount?: number
           billing_cycle?: string
           billing_day?: number
@@ -263,6 +268,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           next_billing_date?: string
+          notes?: string | null
           provider?: string | null
           subscription_type?: string | null
           user_id?: string

@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { format } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -322,11 +324,11 @@ export function CreditForm({ onSuccess, initialData }: Props) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="start_date">Fecha de inicio</Label>
-          <Input
-            id="start_date"
-            type="date"
-            {...register('start_date')}
+          <Label>Fecha de inicio</Label>
+          <DatePicker
+            value={watch('start_date') ? new Date(watch('start_date') + 'T00:00:00') : undefined}
+            onChange={(date) => setValue('start_date', date ? format(date, 'yyyy-MM-dd') : '')}
+            placeholder="Fecha de inicio"
           />
           {errors.start_date && (
             <p className="text-sm text-red-500">{errors.start_date.message}</p>
@@ -334,11 +336,11 @@ export function CreditForm({ onSuccess, initialData }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="end_date">Fecha de término (opcional)</Label>
-          <Input
-            id="end_date"
-            type="date"
-            {...register('end_date')}
+          <Label>Fecha de término (opcional)</Label>
+          <DatePicker
+            value={watch('end_date') ? new Date(watch('end_date') + 'T00:00:00') : undefined}
+            onChange={(date) => setValue('end_date', date ? format(date, 'yyyy-MM-dd') : '')}
+            placeholder="Fecha de término"
           />
         </div>
       </div>

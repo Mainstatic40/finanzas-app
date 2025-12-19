@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 import { availableIcons, getIconByName } from '@/lib/icons'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { ColorPicker } from '@/components/ui/ColorPicker'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -230,12 +230,10 @@ export function CategoryForm({ onSuccess, initialData }: Props) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="color">Color</Label>
-        <Input
-          id="color"
-          type="color"
-          className="h-10 w-20"
-          {...register('color')}
+        <Label>Color</Label>
+        <ColorPicker
+          value={watch('color') || '#3b82f6'}
+          onChange={(color) => setValue('color', color)}
         />
       </div>
 

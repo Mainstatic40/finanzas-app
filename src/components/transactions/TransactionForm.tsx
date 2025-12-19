@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { format } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -367,11 +369,11 @@ export function TransactionForm({ onSuccess, initialData }: Props) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="date">Fecha</Label>
-          <Input
-            id="date"
-            type="date"
-            {...register('date')}
+          <Label>Fecha</Label>
+          <DatePicker
+            value={watch('date') ? new Date(watch('date') + 'T00:00:00') : undefined}
+            onChange={(date) => setValue('date', date ? format(date, 'yyyy-MM-dd') : '')}
+            placeholder="Fecha de transacción"
           />
           {errors.date && (
             <p className="text-sm text-red-500">{errors.date.message}</p>
